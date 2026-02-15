@@ -66,7 +66,7 @@ if res:
 		ff=os.path.join(dir,f)
 		if not os.path.exists(ff): continue
 		#Do we assume 1:1 resume:torrent file relationship?
-t		if torfiles[i].get("mtime"): os.utime(ff,(torfiles[i]["mtime"],torfiles[i]["mtime"]))
+		if torfiles[i].get("mtime"): os.utime(ff,(torfiles[i]["mtime"],torfiles[i]["mtime"]))
 		else: os.utime(ff,(dt,dt))
 		#Are there attributes stored?
 		if torfiles[i].get("attr"):
