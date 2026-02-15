@@ -4,4 +4,4 @@ When launced by transmission various environment variables are set.  In paritcul
 
 First we parse the main .torrent file to get any date metadata.  Then we iterate the .resume file which will reflect any file/folder renaming performed by the user.  I assume there is a 1:1 relationship in the order of entries betwixt the .torrent and .resume file to properly touch each file (this is only relevant if there are mtime entries).
 
-Additionally I try to handle libtorrent's "pad", "link" and "executable" attributes when available.
+Additionally I try to handle BEP 47's "pad", "link", and "executable" attributes when available.
