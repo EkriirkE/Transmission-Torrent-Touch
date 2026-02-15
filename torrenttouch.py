@@ -3,10 +3,12 @@
 #	Set the timestamp of downloaded files to match that of the torrent.
 #
 #	libtorrent supports "mtime" entries.  If this exists use it, otherwise use the create date of the torrent itself, lastly the date added to transmission
+#	also spport BEP 47 file attributes
 import os
 
 #What is the path of transmission's torrents and resume folders?
 transmissionconfig=os.path.join(os.environ["HOME"],".config","transmission")
+linkpad2zero=False #link pad files to /dev/zero, otherwise try to sparsify
 
 #torrents are bencoded
 def bdecode(f,t=None,stringify=False):
@@ -39,6 +41,27 @@ def bdecode(f,t=None,stringify=False):
 			d[k]=v
 	raise BaseException("Unexpected token: %s(%i)" % t,ord(t))
 
+#Do magic on each entry
+def process(f):
+	ff=os.path.join(dir,f["path"])
+	if not os.path.exists(ff): return
+	#Are there attributes stored?
+	if a:=f.get("attr"): #p)ad [sparse], h)idden, x)ecutable, l)ink
+		fs=os.stat(ff)
+		if "p" in a: #Ensure the file is relinked or truncated and sparsed
+			os.unlink(ff)
+			if linkpad2zero: os.symlink("/dev/zero",ff)
+			else:
+				with open(ff,"wb") as sparse: os.ftruncate(sparse,fs.st_size)
+		if "l" in a and (l:=os.path.join(*(f.get("symlink path") or []))) and not fs.st_size: #Only generate the symlink if the file is empty
+			os.unlink(ff)
+			os.symlink(l,ff,os.path.isdir(l))
+		if "x" in a: os.chmod(ff,fs.st_mode | 0o111)
+	#Try per-file date?
+	if d:=f.get("mtime"): os.utime(ff,(d,d))
+	#Finally, use default date
+	else: os.utime(ff,(dt,dt))
+
 torrent=os.path.join(transmissionconfig,"torrents",os.environ["TR_TORRENT_HASH"]+".torrent")
 resume=os.path.join(transmissionconfig,"resume",os.environ["TR_TORRENT_HASH"]+".resume")
 
@@ -66,37 +89,10 @@ torfiles=[{**x,"path":os.path.join(name,*(x.get("path") or []))} for x in (tor["
 #In case there were changes in the file naming, use the "resume" metadata if available.
 if res:
 	for i,f in enumerate(res.get("files") or [res["name"]]): #If no files, treat name as 1 file
-		ff=os.path.join(dir,f)
-		if not os.path.exists(ff): continue
-		#Are there attributes stored?
-		if a:=torfiles[i].get("attr"): #p)ad, h)idden, x)ecutable, l)ink
-			fs=os.stat(ff)
-			if "p" in a: #Ensure the file is truncated and sparsed
-				with open(ff,"wb") as sparse: os.ftruncate(sparse,fs.st_size)
-			if "l" in a and (l:=torfiles[i].get("symlink path")) and not fs.st_size: #Only generate the symlink if the file is empty
-				os.unlink(ff)
-				os.symlink(l,ff,os.path.isdir(l))
-			if "x" in a: os.chmod(ff,fs.st_mode | 0o111)
-		#Do we assume 1:1 resume:torrent file relationship?
-		if d:=torfiles[i].get("mtime"): os.utime(ff,(d,d))
-		else: os.utime(ff,(dt,dt))
+		process({**torfiles[i],"path":f}) #Reformat like a torrent entry
 	exit(0)
 
 
 #Iterate the actual torrent
 for f in torfiles:
-	ff=os.path.join(dir,f["path"])
-	if not os.path.exists(ff): continue
-	#Are there attributes stored?
-	if a:=f.get("attr"): #p)ad [sparse], h)idden, x)ecutable, l)ink
-		fs=os.stat(ff)
-		if "p" in a: #Ensure the file is truncated and sparsed
-			with open(ff,"wb") as sparse: os.ftruncate(sparse,fs.st_size)
-		if "l" in a and (l:=f.get("symlink path")) and not fs.st_size: #Only generate the symlink if the file is empty
-			os.unlink(ff)
-			os.symlink(l,ff,os.path.isdir(l))
-		if "x" in a: os.chmod(ff,fs.st_mode | 0o111)
-	#Try per-file date?
-	if d:=f.get("mtime"): os.utime(ff,(d,d))
-	#Finally, use default date
-	else: os.utime(ff,(dt,dt))
+	process(f)
