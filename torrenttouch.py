@@ -31,7 +31,7 @@ def bdecode(f,t=None,stringify=False):
 		while True:
 			c=f.read(1).decode()
 			if c=="e": return d
-			k=bdecode(f,c).decode()
+			k=bdecode(f,c,True)
 			v=bdecode(f,None,stringify)
 			d[k]=v
 	raise BaseException("Unexpected token: %s(%i)" % t,ord(t))
