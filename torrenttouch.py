@@ -69,10 +69,9 @@ if res:
 		ff=os.path.join(dir,f)
 		if not os.path.exists(ff): continue
 		#Are there attributes stored?
-		if a:=torfiles[i].get("attr"):
-			#p)ad, h)idden, x)ecutable, l)ink
+		if a:=torfiles[i].get("attr"): #p)ad, h)idden, x)ecutable, l)ink
 			fs=os.stat(ff)
-			if "p" in a: #Ensure the file is trincated and sparsed
+			if "p" in a: #Ensure the file is truncated and sparsed
 				with open(ff,"wb") as sparse: os.ftruncate(sparse,fs.st_size)
 			if "l" in a and (l:=torfiles[i].get("symlink path")) and not fs.st_size: #Only generate the symlink if the file is empty
 				os.unlink(ff)
@@ -89,10 +88,9 @@ for f in torfiles:
 	ff=os.path.join(dir,f["path"])
 	if not os.path.exists(ff): continue
 	#Are there attributes stored?
-	if a:=f.get("attr"):
-		#p)ad [sparse], h)idden, x)ecutable, l)ink
+	if a:=f.get("attr"): #p)ad [sparse], h)idden, x)ecutable, l)ink
 		fs=os.stat(ff)
-		if "p" in a: #Ensure the file is trincated and sparsed
+		if "p" in a: #Ensure the file is truncated and sparsed
 			with open(ff,"wb") as sparse: os.ftruncate(sparse,fs.st_size)
 		if "l" in a and (l:=f.get("symlink path")) and not fs.st_size: #Only generate the symlink if the file is empty
 			os.unlink(ff)
