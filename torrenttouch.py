@@ -6,7 +6,7 @@
 import os
 
 #What is the path of transmission's torrents and resume folders?
-transmissionconfig=os.path.join(os.environ["HOME"],".config/transmission")
+transmissionconfig=os.path.join(os.environ["HOME"],".config","transmission")
 
 #torrents are bencoded
 def bdecode(f,t=None,stringify=False):
