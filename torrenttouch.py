@@ -41,27 +41,6 @@ def bdecode(f,t=None,stringify=False):
 			d[k]=v
 	raise BaseException("Unexpected token: %s(%i)" % t,ord(t))
 
-#Do magic on each entry
-def process(f):
-	ff=os.path.join(dir,f["path"])
-	if not os.path.exists(ff): return
-	#Are there attributes stored?
-	if a:=f.get("attr"): #p)ad [sparse], h)idden, x)ecutable, l)ink
-		fs=os.stat(ff)
-		if "p" in a: #Ensure the file is relinked or truncated and sparsed
-			os.unlink(ff)
-			if linkpad2zero: os.symlink("/dev/zero",ff)
-			else:
-				with open(ff,"wb") as sparse: os.ftruncate(sparse,fs.st_size)
-		if "l" in a and (l:=os.path.join(*(f.get("symlink path") or []))) and not fs.st_size: #Only generate the symlink if the file is empty
-			os.unlink(ff)
-			os.symlink(l,ff,os.path.isdir(l))
-		if "x" in a: os.chmod(ff,fs.st_mode | 0o111)
-	#Try per-file date?
-	if d:=f.get("mtime"): os.utime(ff,(d,d))
-	#Finally, use default date
-	else: os.utime(ff,(dt,dt))
-
 torrent=os.path.join(transmissionconfig,"torrents",os.environ["TR_TORRENT_HASH"]+".torrent")
 resume=os.path.join(transmissionconfig,"resume",os.environ["TR_TORRENT_HASH"]+".resume")
 
@@ -86,13 +65,26 @@ dir=(res or {}).get("destination") or os.getenv("TR_TORRENT_DIR")
 #Flatten torrent files similar to resume files
 torfiles=[{**x,"path":os.path.join(name,*(x.get("path") or []))} for x in (tor["info"].get("files") or [tor["info"]])]	#If no files, treat info as 1 file.  Flatten any paths with adjacent tags
 
-#In case there were changes in the file naming, use the "resume" metadata if available.
-if res:
-	for i,f in enumerate(res.get("files") or [res["name"]]): #If no files, treat name as 1 file
-		process({**torfiles[i],"path":f}) #Reformat like a torrent entry
-	exit(0)
+#In case there were changes in the file naming, use the "resume" metadata if available.  Assuming a 1:1 file order betwixt the torrent and resume files
+if res: torfiles=[{**torfiles[i],"path":f} for i,f in enumerate(res.get("files") or [res["name"]])]
 
-
-#Iterate the actual torrent
+#Iterate the files
 for f in torfiles:
-	process(f)
+	ff=os.path.join(dir,f["path"])
+	if not os.path.exists(ff): continue
+	#Are there attributes stored?
+	if a:=f.get("attr"): #p)ad [sparse], h)idden, x)ecutable, l)ink
+		fs=os.stat(ff)
+		if "p" in a: #Ensure the file is relinked or truncated and sparsed
+			os.unlink(ff)
+			if linkpad2zero: os.symlink("/dev/zero",ff)
+			else:
+				with open(ff,"wb") as sparse: os.ftruncate(sparse,f["length"])
+		if "l" in a and (l:=os.path.join(*(f.get("symlink path") or []))) and not fs.st_size: #Only generate the symlink if the file is empty
+			os.unlink(ff)
+			os.symlink(l,ff,os.path.isdir(l))
+		if "x" in a: os.chmod(ff,fs.st_mode | 0o111)
+	#Try per-file date?
+	if d:=f.get("mtime"): os.utime(ff,(d,d))
+	#Finally, use default date
+	else: os.utime(ff,(dt,dt))
