@@ -3,3 +3,5 @@ The transmission BitTorrent client has an option to execute a script upon torren
 When launced by transmission various environment variables are set.  In paritcular there is `TR_TORRENT_HASH`, and assuming the work files for transmission are in $HOME/.config/transmission/torrent|resume/$TR_TORRENT_HASH we can parse these to "touch" the downloaded files to match the torrent date(s).
 
 First we parse the main .torrent file to get any date metadata.  Then we iterate the .resume file which will reflect any file/folder renaming performed by the user.  I assume there is a 1:1 relationship in the order of entries betwixt the .torrent and .resume file to properly touch each file (this is only relevant if there are mtime entries).
+
+Additionally I try to handle libtorrent's "pad", "link" and "executable" attributes when available.
