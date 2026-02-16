@@ -79,12 +79,12 @@ for f in torfiles:
 			os.unlink(ff)
 			if linkpad2zero: os.symlink("/dev/zero",ff)
 			else:
-				with open(ff,"wb") as sparse: os.ftruncate(sparse,f["length"])
+				with open(ff,"wb") as sparse: sparse.truncate(f["length"])
 		if "l" in a and (l:=os.path.join(*(f.get("symlink path") or []))) and not fs.st_size: #Only generate the symlink if the file is empty
 			os.unlink(ff)
 			os.symlink(l,ff,os.path.isdir(l))
 		if "x" in a: os.chmod(ff,fs.st_mode | 0o111)
 	#Try per-file date?
-	if d:=f.get("mtime"): os.utime(ff,(d,d))
+	if d:=int(f.get("mtime") or 0): os.utime(ff,(d,d))
 	#Finally, use default date
 	else: os.utime(ff,(dt,dt))
